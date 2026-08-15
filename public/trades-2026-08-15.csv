@@ -1,0 +1,6 @@
+date,symbol,side,quantity,price,account_code,client_hint
+2026-08-15,BIL,buy,2500,91.64,VOSS-IRA-8841,Voss IRA
+2026-08-15,VCIT,buy,1800,82.10,SHAH-TX-092,Shah taxable
+2026-08-15,MSFT,sell,120,428.55,CHEN-TX-330,Chen
+2026-08-15,JEPI,buy,3000,56.22,ALVA-IRA-56,Alvarez IRA
+2026-08-15,BRK.B,buy,40,412.00,HALE-TX-04,Hale
