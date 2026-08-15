@@ -125,7 +125,17 @@ export function ProspectDetail() {
                 <option>annual</option>
               </select>
             </Field>
-            <Btn onClick={() => show('plan', `Plan — ${p.name}`, interactionPlan(p.name, p.company, horizon, p.objective))}>
+            <Btn onClick={() => show('plan', `Plan — ${p.name}`, interactionPlan(p.name, p.company, horizon, p.objective, {
+              lastTouch: p.lastTouch,
+              nextTouch: p.nextTouch,
+              products: p.products,
+              stage: p.stage,
+              notes: p.notes,
+              priorNotes: p.priorNotes,
+              source: p.source,
+              city: p.city,
+              relationship: p.relationshipStatus,
+            }))}>
               Build plan
             </Btn>
           </Card>

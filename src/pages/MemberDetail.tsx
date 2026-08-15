@@ -14,6 +14,7 @@ export function MemberDetail() {
   const [tab, setTab] = useState<'overview' | 'rolodex' | 'accounts' | 'plan'>('overview')
   const [memText, setMemText] = useState('')
   const [inbound, setInbound] = useState('')
+  const [strategy, setStrategy] = useState(m?.strategy ?? '')
 
   if (!m) return <div className="page">No member on that id.</div>
   const member = m
@@ -76,6 +77,13 @@ export function MemberDetail() {
         </div>
       </div>
 
+      {txns[0] && (
+        <div className="warn-strip">
+          Latest approved fill: <b>{txns[0].side.toUpperCase()} {txns[0].quantity.toLocaleString()} {txns[0].symbol}</b>
+          {' '}on {txns[0].date} · {moneyExact(txns[0].quantity * txns[0].price)}
+        </div>
+      )}
+
       <div className="filters">
         {(['overview', 'rolodex', 'accounts', 'plan'] as const).map((t) => (
           <button key={t} className={`chip ${tab === t ? 'on' : ''}`} onClick={() => setTab(t)}>
@@ -87,8 +95,27 @@ export function MemberDetail() {
       {tab === 'overview' && (
         <div className="grid g-main">
           <div className="grid">
-            <Card title="Strategy">
-              <p style={{ margin: 0, fontFamily: 'var(--serif)', lineHeight: 1.5 }}>{m.strategy}</p>
+            <Card
+              title="Strategy"
+              action={
+                <Btn
+                  kind="tiny"
+                  onClick={() =>
+                    patch((s) => {
+                      const row = s.members.find((mm) => mm.id === member.id)
+                      if (row) row.strategy = strategy
+                    })
+                  }
+                >
+                  Save
+                </Btn>
+              }
+            >
+              <textarea
+                value={strategy}
+                onChange={(e) => setStrategy(e.target.value)}
+                style={{ width: '100%', minHeight: 120, fontFamily: 'var(--serif)', lineHeight: 1.5 }}
+              />
               <div className="pills" style={{ marginTop: 12 }}>
                 {m.products.map((p) => (
                   <span key={p} className="pill">{p}</span>

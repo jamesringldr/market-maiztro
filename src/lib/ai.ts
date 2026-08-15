@@ -114,85 +114,170 @@ Solyco
 `
 }
 
-export function interactionPlan(name: string, company: string, horizon: string, focus: string): string {
+export type PlanContext = {
+  lastTouch?: string
+  nextTouch?: string
+  products?: string[]
+  family?: string[]
+  stage?: string
+  notes?: string
+  priorNotes?: string
+  source?: string
+  city?: string
+  relationship?: string
+}
+
+export function interactionPlan(
+  name: string,
+  company: string,
+  horizon: string,
+  focus: string,
+  ctx: PlanContext = {},
+): string {
+  const first = name.split(' ')[0]
+  const family = ctx.family?.filter(Boolean) ?? []
+  const products = ctx.products ?? []
+  const file = [ctx.notes, ctx.priorNotes].filter(Boolean).join(' ')
+  const brother = /brother/i.test(file)
+  const cash = /working capital|cash|receivable|bank line/i.test(`${focus} ${file}`)
   const beats: Record<string, string[]> = {
     '7-day': [
-      'Day 0: same-day recap, three bullets, no attachments.',
-      'Day 2: one useful artifact (cash map, IPS excerpt, or intro) — not a check-in.',
-      'Day 5: short call window offered, two times, their timezone.',
-      'Day 7: if silent, one line and then stop.',
+      `Day 0: same-day recap to ${first} — three bullets on “${focus.split('.')[0]}”, no attachments.`,
+      ctx.source
+        ? `Day 2: one artifact that honors ${ctx.source} (borrowed trust — do not send a deck).`
+        : 'Day 2: one useful artifact — cash map, IPS excerpt, or intro. Not a check-in.',
+      cash
+        ? 'Day 5: offer two call times with a one-page cash-conversion map. Recap stays in the drawer.'
+        : `Day 5: offer two call times in ${ctx.city || 'their timezone'}.`,
+      `Day 7: if silent, one line referencing ${ctx.nextTouch || 'the next date on the file'}, then stop.`,
     ],
     '30-day': [
-      'Week 1: recap + one artifact.',
-      'Week 2: market or operating talking point tied to their book, not the tape.',
-      'Week 3: introduce one relevant person or one relevant page.',
-      'Week 4: propose the next meeting with a written agenda.',
+      `Week 1: recap + the artifact that matches the live issue (${cash ? 'cash map' : 'one page on ' + focus.split('.')[0].toLowerCase()}).`,
+      brother
+        ? `Week 2: do not raise a recap. If you write, write something ${first} can hand his brother without drama.`
+        : 'Week 2: one talking point tied to their book, not the tape.',
+      family.length
+        ? `Week 3: only involve ${family[0]} if ${first} opens that door.`
+        : 'Week 3: introduce one relevant person or one relevant page.',
+      ctx.stage === 'commit'
+        ? `Week 4: this is a close. Paper the thing already agreed. Do not reopen discovery.`
+        : `Week 4: propose the next meeting with a written agenda. Last touch was ${ctx.lastTouch || 'unrecorded'}.`,
     ],
     '60-day': [
-      'Days 1–14: earn the right to a second meeting.',
-      'Days 15–30: put a specific product or path on paper, still optional.',
-      'Days 31–45: involve the other decision-maker.',
-      'Days 46–60: decide: advance, nurture, or drop.',
+      `Days 1–14: earn a second meeting on “${focus.split('.')[0]}.”`,
+      products.length
+        ? `Days 15–30: put ${products[0]} on paper as optional — never as the opener.`
+        : 'Days 15–30: put a specific path on paper, still optional.',
+      brother || family.length
+        ? `Days 31–45: the other decision-maker (${brother ? 'the brother on the floor' : family[0]}) only after ${first} invites it.`
+        : 'Days 31–45: involve the other decision-maker.',
+      `Days 46–60: decide — advance, nurture, or drop. Relationship is ${ctx.relationship || 'unscored'}.`,
     ],
     '90-day': [
-      'Month 1: diagnosis.',
-      'Month 2: a reversible first step (cash, IPS, continuity).',
-      'Month 3: only then a commitment conversation.',
+      `Month 1: diagnosis of ${company} as it actually makes money, not the website.`,
+      cash
+        ? 'Month 2: a reversible first step — corporate cash sleeve and a continuity signer. No term sheet.'
+        : 'Month 2: a reversible first step (cash, IPS, continuity).',
+      products.length
+        ? `Month 3: only then a commitment conversation (${products.join(', ')}).`
+        : 'Month 3: only then a commitment conversation.',
       'Cadence: one call, one written, one personal touch per month. No more.',
     ],
     annual: [
-      'Q1: planning and tax coordination.',
+      `Q1: planning. Start from last touch ${ctx.lastTouch || 'on file'}, not a calendar default.`,
       'Q2: performance vs. the thing they actually care about.',
-      'Q3: family / succession / next generation.',
-      'Q4: commitments and calendar for the following year.',
+      family.length
+        ? `Q3: family / succession — ${family.join('; ')}.`
+        : 'Q3: family / succession / next generation.',
+      products.length
+        ? `Q4: commitments (${products.join(', ')}) and next year’s calendar.`
+        : 'Q4: commitments and calendar for the following year.',
       'Personal: one non-commercial touch per quarter.',
     ],
   }
   const key = horizon in beats ? horizon : '30-day'
   return `# Interaction plan — ${name}
 **${company}** · ${horizon} · focus: ${focus}
+${ctx.source ? `Source: ${ctx.source}. ` : ''}${ctx.stage ? `Stage: ${ctx.stage}.` : ''}
 
 ${beats[key].map((l) => `- ${l}`).join('\n')}
 
 ## Cadence
 - Calls: scheduled, never “just checking in.”
 - Email: artifacts, not pulses.
-- Market updates: only when they change a decision for this person.
+- Market updates: only when they change a decision for ${first}.
 - Personal: one thing you would do even if they never gave you a dollar.
 
 ## Next-best action
-Do the Day 0 / Week 1 item today. Everything else is decoration until that is sent.
+${cash ? `Send the cash map today. Do not mention a recap.` : `Do the Day 0 / Week 1 item today. Everything else is decoration until that is sent.`}
+${brother ? `\nDo not put “recap” in a subject line ${first} might forward.` : ''}
 `
 }
 
-export function meetingNotes(name: string, kind: 'internal' | 'external', transcript: string, objective: string): {
+function pullLines(transcript: string, re: RegExp): string[] {
+  return transcript
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l && re.test(l))
+}
+
+export function meetingNotes(
+  name: string,
+  kind: 'internal' | 'external',
+  transcript: string,
+  objective: string,
+  extras: { landmines?: string[]; products?: string[] } = {},
+): {
   internal: string
   external: string
 } {
+  const first = name.split(' ')[0]
+  const learned = pullLines(
+    transcript,
+    /\$|million|percent|bank line|receivable|IPS|Fund IV|lockup|signer|DAF|trust|muni|working capital|brother|wife|close|October|duration/i,
+  )
+  const promises = pullLines(transcript, /\bI will\b|\bwe (can|do|park|start|give|send)\b/i)
+  const theirVoice = pullLines(transcript, new RegExp(`^${first}\\b|^[A-Z][a-z]+ [A-Z][a-z]+:`, 'i')).slice(0, 6)
+  const upsells: string[] = []
+  const blob = transcript.toLowerCase()
+  if (/fund iv|three million|commitment/.test(blob)) upsells.push('Fund IV — they put a number on it. Do not enlarge it.')
+  if (/working capital|bank line|receivable/.test(blob)) upsells.push('Corporate cash-management sleeve — this is conversion, not a sale.')
+  if (/signer|succession|brother/.test(blob)) upsells.push('Continuity memo / authorized signer — volunteered, same-week fix.')
+  if (/donor-advised|daf/.test(blob)) upsells.push('DAF — named, small, veto stays with the principal.')
+
+  const learnedBlock = learned.length
+    ? learned.map((l) => `- ${l}`).join('\n')
+    : transcript
+      ? '- Tape exists but no hard facts jumped. Read it again before you write a number down.'
+      : '- No transcript yet — write from memory, then tighten.'
+
   const internal = `# Internal recap — ${name}
 
 **Objective:** ${objective}
 
 ## What we learned
-${transcript ? 'See live transcript. Pull facts, not color.' : 'No transcript yet — write from memory, then tighten.'}
+${learnedBlock}
+
+## Their words
+${theirVoice.length ? theirVoice.map((l) => `- ${l}`).join('\n') : '- Nothing attributed yet.'}
+
+## What we promised
+${promises.length ? promises.map((l) => `- ${l}`).join('\n') : '- No explicit promise on the tape. Do not invent one.'}
 
 ## Opportunities
-- Product / path that earned its way into the conversation.
-- Family or entity that is not yet on the books.
-- A next meeting with a second decision-maker.
+${upsells.length ? upsells.map((u) => `- ${u}`).join('\n') : '- Nothing earned. Do not manufacture a ticket.'}
+${extras.products?.length ? `- On the file already: ${extras.products.join(', ')}.` : ''}
 
 ## Risks
-- Anything they asked us not to touch.
-- Any number we quoted that we must stand behind.
+${extras.landmines?.length ? extras.landmines.map((d) => `- ${d}`).join('\n') : '- None flagged on the file.'}
+- Any number we quoted we must stand behind.
 
 ## Follow-ups
-- Same-day written recap (external version).
+- Same-day written recap (external version) — only what we promised.
 - One artifact, not three.
 - Log a touchpoint with a real date.
-
-## Upsells (internal only)
-Flag only what the conversation actually opened. Do not invent a Fund IV ticket.
 `
+  const promisedThem = promises[0]?.replace(/^[^:]+:\s*/, '') ?? 'the one thing I said I would send'
   const external = kind === 'internal'
     ? ''
     : `# Note for ${name}
@@ -201,7 +286,8 @@ Thank you for the time today.
 
 What I heard as the live issue: ${objective}
 
-I will send the one thing I promised — and nothing else — by end of day.
+${learned[0] ? `I wrote down: ${learned[0].replace(/^[^:]+:\s*/, '')}\n` : ''}
+I will send ${promisedThem.toLowerCase().startsWith('i will') ? promisedThem.charAt(0).toLowerCase() + promisedThem.slice(1) : promisedThem} — and nothing else — by end of day.
 
 If I have any of this wrong, reply with a line and I will correct the file.
 

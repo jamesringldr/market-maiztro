@@ -132,6 +132,7 @@ export type Meeting = {
   agenda: string[]
   status: 'upcoming' | 'live' | 'done'
   script: TranscriptLine[]
+  heard: TranscriptLine[]
   revealed: number
   internalNotes: string
   externalNotes: string

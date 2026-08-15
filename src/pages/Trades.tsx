@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Badge, Btn, Card } from '../components/ui'
 import { DEMO_CSV, parseTradesCsv } from '../lib/csv'
 import { moneyExact } from '../lib/ids'
-import { addTrade, approveTrade, rejectTrade, resolveFanout, useStore } from '../lib/store'
+import { addTrade, approveTrade, assignFanout, rejectTrade, resolveFanout, useStore } from '../lib/store'
 
 export function Trades() {
   const { state, patch } = useStore()
@@ -98,12 +98,39 @@ export function Trades() {
                     <div className="sub">{t.clientHint}</div>
                   </td>
                   <td>
-                    {t.fanout.length === 0 && <Badge kind="danger">Unmatched</Badge>}
+                    {t.fanout.length === 0 && (
+                      <div>
+                        <Badge kind="danger">Unmatched</Badge>
+                        <select
+                          style={{ display: 'block', marginTop: 6, maxWidth: 220 }}
+                          defaultValue=""
+                          onChange={(e) => {
+                            const [memberId, accountId] = e.target.value.split(':')
+                            if (memberId && accountId) patch((s) => assignFanout(s, t.id, memberId, accountId))
+                          }}
+                        >
+                          <option value="" disabled>Assign account…</option>
+                          {state.members.flatMap((m) =>
+                            m.accounts.map((a) => (
+                              <option key={a.id} value={`${m.id}:${a.id}`}>
+                                {m.name} · {a.code}
+                              </option>
+                            )),
+                          )}
+                        </select>
+                      </div>
+                    )}
                     {t.fanout.map((f) => {
                       const m = state.members.find((x) => x.id === f.memberId)
                       return (
                         <div key={f.accountId}>
-                          <button className="btn tiny" onClick={() => nav(`/members/${f.memberId}`)}>
+                          <button
+                            className="btn tiny"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              nav(`/members/${f.memberId}`)
+                            }}
+                          >
                             {m?.name ?? f.memberId}
                           </button>
                           <div className="sub">{f.accountCode}</div>

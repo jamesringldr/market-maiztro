@@ -57,7 +57,17 @@ export function Studio() {
               </Btn>
               <Btn
                 onClick={() =>
-                  p && run('plan', `Plan — ${p.name}`, interactionPlan(p.name, p.company, horizon, p.objective))
+                  p && run('plan', `Plan — ${p.name}`, interactionPlan(p.name, p.company, horizon, p.objective, {
+                    lastTouch: p.lastTouch,
+                    nextTouch: p.nextTouch,
+                    products: p.products,
+                    stage: p.stage,
+                    notes: p.notes,
+                    priorNotes: p.priorNotes,
+                    source: p.source,
+                    city: p.city,
+                    relationship: p.relationshipStatus,
+                  }))
                 }
               >
                 Interaction plan

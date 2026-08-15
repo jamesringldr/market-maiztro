@@ -32,6 +32,8 @@ Open [http://localhost:5173](http://localhost:5173). Desk date is locked to **Sa
 
 Reset the book from the sidebar if you want the original seed back. State lives in `localStorage`.
 
+Click-through checklist: [VALIDATION.md](./VALIDATION.md). Live meeting can **Listen** with this browser’s own speech recognizer (Chrome/Safari); nothing is sent to a vendor.
+
 ## Out of scope (on purpose)
 
 Real data imports, real APIs, a full database schema, the compliance/audit layer, and white-label / multi-tenant. See the Lab workspace at `Maiztro-Lab/domains/fullstack/market-maiztro/`.

@@ -600,6 +600,7 @@ const meetings: Meeting[] = [
       'Same-day written recap',
     ],
     status: 'upcoming',
+    heard: [],
     revealed: 0,
     script: [
       { id: 'ts1', atSec: 0, speaker: 'James', text: 'Priya — thanks for making the morning. I sent the packet last night so Ravi has the printed set.' },
@@ -631,6 +632,7 @@ const meetings: Meeting[] = [
       'Next step if there is a pulse',
     ],
     status: 'upcoming',
+    heard: [],
     revealed: 0,
     script: [
       { id: 'sm1', atSec: 0, speaker: 'James', text: 'John — James Whitaker said I should not waste your time, so I will not. You mentioned working capital and a key-person gap. Which one is keeping you up?' },
@@ -657,6 +659,7 @@ const meetings: Meeting[] = [
     attendeeIds: [],
     agenda: ['Adler close path', 'Nguyen valuation gap', 'Brooks DPI answers', 'Holm: nurture or drop', 'Trades CSV from this morning'],
     status: 'upcoming',
+    heard: [],
     revealed: 0,
     script: [
       { id: 'in1', atSec: 0, speaker: 'James', text: 'Adler first. Verbal yes on 8/4. Blocker is the family LLC addendum — his wife is the economic buyer. Who is calling her?' },
@@ -683,6 +686,7 @@ const meetings: Meeting[] = [
       'Henry’s DAF',
     ],
     status: 'upcoming',
+    heard: [],
     revealed: 0,
     script: [
       { id: 'vo1', atSec: 0, speaker: 'James', text: 'Eleanor. I will not stay long — you have Claremont in the morning. Is October 14th still the close?' },
@@ -706,6 +710,7 @@ const meetings: Meeting[] = [
     attendeeIds: [{ type: 'prospect', id: 'p-brooks' }],
     agenda: ['DPI bridge', 'Whitaker realization path', 'Co-invest rights', 'Next IC date'],
     status: 'upcoming',
+    heard: [],
     revealed: 0,
     script: [],
     internalNotes: '',

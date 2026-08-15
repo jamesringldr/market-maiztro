@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Badge, Btn, Card } from '../components/ui'
 import { meetingNotes, memberUpsells } from '../lib/ai'
 import { addArtifact, updateMeeting, useStore } from '../lib/store'
-import { nowISO } from '../lib/ids'
+import { nowISO, uid } from '../lib/ids'
 import type { Member } from '../types'
 
 export function LiveRedirect() {
@@ -20,6 +20,9 @@ export function MeetingLive() {
   const nav = useNavigate()
   const meeting = state.meetings.find((m) => m.id === id)
   const [running, setRunning] = useState(false)
+  const [listening, setListening] = useState(false)
+  const [speechNote, setSpeechNote] = useState('')
+  const recRef = useRef<SpeechRecognitionLike | null>(null)
 
   const attendee = useMemo(() => {
     if (!meeting) return null
@@ -48,12 +51,21 @@ export function MeetingLive() {
     return () => window.clearTimeout(t)
   }, [running, meeting, patch])
 
+  useEffect(() => {
+    return () => {
+      recRef.current?.stop()
+      recRef.current = null
+    }
+  }, [])
+
   if (!meeting) return <div className="page">Meeting not on the book.</div>
   const mtg = meeting
 
   const shown = mtg.script.slice(0, mtg.revealed)
+  const heard = mtg.heard ?? []
   const member = attendee?.type === 'member' ? (attendee.person as Member) : undefined
-  const liveText = shown.map((l) => `${l.speaker}: ${l.text}`).join('\n')
+  const liveText = [...shown, ...heard].map((l) => `${l.speaker}: ${l.text}`).join('\n')
+  const Ctor = typeof window !== 'undefined' ? (window.SpeechRecognition || window.webkitSpeechRecognition) : undefined
 
   const keywordUpsells: { title: string; why: string }[] = []
   const blob = liveText.toLowerCase()
@@ -83,9 +95,57 @@ export function MeetingLive() {
     setRunning(true)
   }
 
+  function stopListen() {
+    recRef.current?.stop()
+    recRef.current = null
+    setListening(false)
+  }
+
+  function startListen() {
+    if (!Ctor) {
+      setSpeechNote('This browser has no Web Speech API. The scripted tape still runs. Try Chrome or Safari.')
+      return
+    }
+    const rec = new Ctor()
+    rec.continuous = true
+    rec.interimResults = false
+    rec.lang = 'en-US'
+    rec.onresult = (ev) => {
+      let chunk = ''
+      for (let i = ev.resultIndex; i < ev.results.length; i++) {
+        const row = ev.results[i]
+        if (row.isFinal) chunk += row[0].transcript
+      }
+      const text = chunk.trim()
+      if (!text) return
+      patch((s) => {
+        const m = s.meetings.find((x) => x.id === mtg.id)
+        if (!m) return
+        m.heard = m.heard ?? []
+        m.heard.push({ id: uid('live'), atSec: 0, speaker: 'Room', text })
+      })
+    }
+    rec.onerror = () => {
+      setSpeechNote('Mic was blocked or failed. The tape still works.')
+      setListening(false)
+    }
+    rec.onend = () => setListening(false)
+    recRef.current = rec
+    rec.start()
+    setListening(true)
+    setSpeechNote('Listening in this browser. Nothing leaves the machine.')
+    patch((s) => {
+      updateMeeting(s, mtg.id, { status: 'live' })
+      s.liveMeetingId = mtg.id
+    })
+  }
+
   function generate() {
     const who = attendee?.person.name ?? mtg.title
-    const notes = meetingNotes(who, mtg.kind, liveText, mtg.objective)
+    const notes = meetingNotes(who, mtg.kind, liveText, mtg.objective, {
+      landmines: member?.dontTouch,
+      products: member?.products ?? (attendee?.type === 'prospect' ? attendee.person.products : []),
+    })
     patch((s) => {
       updateMeeting(s, mtg.id, {
         internalNotes: notes.internal,
@@ -111,8 +171,9 @@ export function MeetingLive() {
             {meeting.title}
           </h2>
           <p className="lede">
-            Simulated live companion. Transcript plays from a scripted tape — no outside STT wire.
-            Internal recap stays in the room; the member version is the letter you would actually send.
+            Scripted tape for the demo room, plus this browser’s own speech recognizer if you
+            want a live line. No vendor STT. Internal recap stays in the room; the member
+            version is the letter you would actually send.
           </p>
         </div>
         <div className="btn-row">
@@ -122,17 +183,31 @@ export function MeetingLive() {
             </Btn>
           )}
           {running && <Btn onClick={() => setRunning(false)}>Pause</Btn>}
+          {!listening ? (
+            <Btn onClick={startListen}>Listen</Btn>
+          ) : (
+            <Btn kind="bad" onClick={stopListen}>Stop mic</Btn>
+          )}
           <Btn onClick={() => nav(`/meetings/${meeting.id}`)}>Back to prep</Btn>
         </div>
       </div>
 
       <div className="grid g-live">
         <div className="grid">
+          {speechNote && <div className="warn-strip">{speechNote}</div>}
           <div className="transcript">
-            {shown.length === 0 && <div style={{ color: '#8a968b' }}>Press start. The room is quiet.</div>}
+            {shown.length === 0 && heard.length === 0 && (
+              <div style={{ color: '#8a968b' }}>Press start, or listen. The room is quiet.</div>
+            )}
             {shown.map((l) => (
               <div key={l.id} className="line">
                 <div className="who">{l.speaker}</div>
+                <div className="txt">{l.text}</div>
+              </div>
+            ))}
+            {heard.map((l) => (
+              <div key={l.id} className="line">
+                <div className="who">{l.speaker} · live</div>
                 <div className="txt">{l.text}</div>
               </div>
             ))}

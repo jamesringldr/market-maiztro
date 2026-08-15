@@ -1,6 +1,7 @@
 import { Badge, Btn, Card } from '../components/ui'
-import { addComms, useStore } from '../lib/store'
-import { fmtDateTime, nowISO } from '../lib/ids'
+import { addArtifact, addComms, addTrade, resolveFanout, useStore } from '../lib/store'
+import { DEMO_CSV, parseTradesCsv } from '../lib/csv'
+import { fmtDateTime, nowISO, uid } from '../lib/ids'
 
 export function Integrations() {
   const { state, patch } = useStore()
@@ -35,7 +36,83 @@ export function Integrations() {
           seen: false,
         })
       }
+      if (id === 'i-cal') {
+        addComms(s, {
+          channel: 'email',
+          direction: 'in',
+          subjectId: 'p-brooks',
+          subjectType: 'prospect',
+          occurredAt: at,
+          summary: 'Calendar: Natalie Brooks accepted Tuesday 10:00',
+          seen: false,
+        })
+      }
+      if (id === 'i-news') {
+        addArtifact(s, {
+          kind: 'market',
+          title: 'News pulse — Saturday tape',
+          body: 'Regional-bank CRE sleeve sale overnight. Talking point for anyone with a building and a floating rate. Do not turn it into a monologue.',
+          createdAt: at,
+        })
+      }
+      if (id === 'i-orion') {
+        const voss = s.members.find((m) => m.id === 'm-voss')
+        if (voss) voss.notes = `${voss.notes} Orion snapshot refreshed ${at.slice(0, 16)}.`
+      }
+      if (id === 'i-nitro') {
+        const shah = s.members.find((m) => m.id === 'm-shah')
+        if (shah) shah.riskProfile = 'Moderate · Nitrogen 55 · questionnaire re-scored (sim)'
+      }
+      if (id === 'i-edge') {
+        s.approvals.unshift({
+          id: uid('e'),
+          title: 'Standing-letter update — Hale Partners',
+          source: 'Edge Tech',
+          detail: 'Robert Hale · feeder notice language. Simulated inbound from the approvals bus.',
+          status: 'pending',
+          createdAt: at,
+        })
+      }
+      if (id === 'i-csv') {
+        const { rows } = parseTradesCsv(DEMO_CSV)
+        for (const r of rows) {
+          addTrade(s, {
+            date: r.date,
+            symbol: r.symbol,
+            side: r.side,
+            quantity: r.quantity,
+            price: r.price,
+            accountCode: r.account_code,
+            clientHint: r.client_hint,
+            status: 'pending',
+            fanout: resolveFanout(s, r.account_code, r.client_hint),
+          })
+        }
+      }
+      if (id === 'i-li') {
+        addComms(s, {
+          channel: 'text',
+          direction: 'in',
+          subjectId: 'p-brooks',
+          subjectType: 'prospect',
+          occurredAt: at,
+          summary: 'LinkedIn: Natalie Brooks viewed your profile',
+          seen: false,
+        })
+      }
     })
+  }
+
+  const actions: Record<string, string> = {
+    'i-outlook': 'Simulate inbound email',
+    'i-phone': 'Simulate missed call',
+    'i-cal': 'Simulate accept',
+    'i-news': 'Pulse the tape',
+    'i-orion': 'Refresh snapshot',
+    'i-nitro': 'Re-score (sim)',
+    'i-edge': 'New approval',
+    'i-csv': 'Ingest morning file',
+    'i-li': 'Simulate profile view',
   }
 
   return (
@@ -63,11 +140,9 @@ export function Integrations() {
               </Badge>
               <span className="sub">synced {fmtDateTime(i.lastSync)}</span>
             </div>
-            {(i.id === 'i-outlook' || i.id === 'i-phone') && (
-              <Btn kind="tiny" onClick={() => pulse(i.id)}>
-                Simulate inbound
-              </Btn>
-            )}
+            <Btn kind="tiny" onClick={() => pulse(i.id)}>
+              {actions[i.id] ?? 'Simulate'}
+            </Btn>
           </Card>
         ))}
       </div>

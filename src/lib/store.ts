@@ -23,6 +23,7 @@ export function loadState(): AppState {
     if (!raw) return buildSeed()
     const parsed = JSON.parse(raw) as AppState
     if (!parsed.members?.length) return buildSeed()
+    parsed.meetings = (parsed.meetings ?? []).map((m) => ({ ...m, heard: m.heard ?? [] }))
     return parsed
   } catch {
     return buildSeed()
@@ -84,6 +85,16 @@ export function approveTrade(s: AppState, id: string): void {
     }
     s.posted.unshift(txn)
   }
+}
+
+export function assignFanout(s: AppState, tradeId: string, memberId: string, accountId: string): void {
+  const t = s.trades.find((x) => x.id === tradeId)
+  const m = s.members.find((x) => x.id === memberId)
+  const a = m?.accounts.find((x) => x.id === accountId)
+  if (!t || t.status !== 'pending' || !m || !a) return
+  t.fanout = [{ memberId: m.id, accountId: a.id, accountCode: a.code }]
+  t.accountCode = a.code
+  t.clientHint = m.name
 }
 
 export function rejectTrade(s: AppState, id: string, reason: string): void {

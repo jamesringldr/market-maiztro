@@ -25,7 +25,15 @@ export function Btn({
   disabled?: boolean
 }) {
   return (
-    <button type={type} className={`btn ${kind}`} onClick={onClick} disabled={disabled}>
+    <button
+      type={type}
+      className={`btn ${kind}`}
+      disabled={disabled}
+      onClick={(e) => {
+        e.stopPropagation()
+        onClick?.()
+      }}
+    >
       {children}
     </button>
   )
