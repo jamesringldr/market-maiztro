@@ -77,11 +77,10 @@ export function approveTrade(s: AppState, id: string): void {
       tradeId: t.id,
       memberId: f.memberId,
       accountId: f.accountId,
-      symbol: t.symbol,
-      side: t.side,
-      quantity: t.quantity,
-      price: t.price,
-      date: t.date,
+      ticker: t.ticker,
+      weight: t.newWeight,
+      portfolioName: t.portfolioName,
+      date: t.lastTradeDate,
     }
     s.posted.unshift(txn)
   }
@@ -92,9 +91,8 @@ export function assignFanout(s: AppState, tradeId: string, memberId: string, acc
   const m = s.members.find((x) => x.id === memberId)
   const a = m?.accounts.find((x) => x.id === accountId)
   if (!t || t.status !== 'pending' || !m || !a) return
-  t.fanout = [{ memberId: m.id, accountId: a.id, accountCode: a.code }]
-  t.accountCode = a.code
-  t.clientHint = m.name
+  if (t.fanout.some((f) => f.accountId === a.id)) return
+  t.fanout.push({ memberId: m.id, accountId: a.id, accountCode: a.code })
 }
 
 export function rejectTrade(s: AppState, id: string, reason: string): void {
@@ -102,30 +100,6 @@ export function rejectTrade(s: AppState, id: string, reason: string): void {
   if (!t || t.status !== 'pending') return
   t.status = 'rejected'
   t.reason = reason
-}
-
-export function resolveFanout(s: AppState, accountCode: string, clientHint: string) {
-  const code = accountCode.trim().toUpperCase()
-  const hint = clientHint.trim().toLowerCase()
-  const hits: Trade['fanout'] = []
-  for (const m of s.members) {
-    for (const a of m.accounts) {
-      if (a.code.toUpperCase() === code) {
-        hits.push({ memberId: m.id, accountId: a.id, accountCode: a.code })
-      }
-    }
-  }
-  if (hits.length) return hits
-  if (hint) {
-    for (const m of s.members) {
-      const blob = `${m.name} ${m.company}`.toLowerCase()
-      if (blob.includes(hint) || hint.includes(m.name.split(' ').pop()!.toLowerCase())) {
-        const a = m.accounts[0]
-        if (a) hits.push({ memberId: m.id, accountId: a.id, accountCode: a.code })
-      }
-    }
-  }
-  return hits
 }
 
 export function upsertProspect(s: AppState, p: Prospect): void {

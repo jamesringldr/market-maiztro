@@ -1,7 +1,8 @@
 import { Badge, Btn, Card } from '../components/ui'
-import { addArtifact, addComms, addTrade, resolveFanout, useStore } from '../lib/store'
-import { DEMO_CSV, parseTradesCsv } from '../lib/csv'
-import { fmtDateTime, nowISO, uid } from '../lib/ids'
+import { addArtifact, addComms, addTrade, useStore } from '../lib/store'
+import { EXTRA_CSV, parseTradesCsv } from '../lib/csv'
+import { isTodayTrade, resolvePortfolioFanout } from '../lib/portfolio'
+import { fmtDateTime, nowISO, todayISO, uid } from '../lib/ids'
 
 export function Integrations() {
   const { state, patch } = useStore()
@@ -74,18 +75,26 @@ export function Integrations() {
         })
       }
       if (id === 'i-csv') {
-        const { rows } = parseTradesCsv(DEMO_CSV)
+        const { rows } = parseTradesCsv(EXTRA_CSV)
+        const day = todayISO()
         for (const r of rows) {
+          const dup = s.trades.some(
+            (t) =>
+              t.ticker === r.ticker &&
+              t.portfolioName === r.portfolioName &&
+              t.lastTradeDate === r.lastTradeDate,
+          )
+          if (dup) continue
           addTrade(s, {
-            date: r.date,
-            symbol: r.symbol,
-            side: r.side,
-            quantity: r.quantity,
-            price: r.price,
-            accountCode: r.account_code,
-            clientHint: r.client_hint,
-            status: 'pending',
-            fanout: resolveFanout(s, r.account_code, r.client_hint),
+            portfolioName: r.portfolioName,
+            newWeight: r.newWeight,
+            ticker: r.ticker,
+            lastTradeDate: r.lastTradeDate,
+            nextCheckDate: r.nextCheckDate,
+            signal: r.signal,
+            performance: r.performance,
+            status: isTodayTrade(r.lastTradeDate, day) ? 'pending' : 'approved',
+            fanout: resolvePortfolioFanout(s.members, r.portfolioName),
           })
         }
       }

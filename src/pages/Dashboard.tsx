@@ -1,43 +1,20 @@
 import { useNavigate } from 'react-router-dom'
 import { Badge, Card } from '../components/ui'
-import { compact, daysFrom, fmtTime, todayISO } from '../lib/ids'
+import { fmtTime, todayISO } from '../lib/ids'
+import { isTodayTrade } from '../lib/portfolio'
 import { useStore } from '../lib/store'
 
 export function Dashboard() {
-  const { state, personName } = useStore()
+  const { state } = useStore()
   const nav = useNavigate()
   const today = todayISO()
-  const meetings = state.meetings.filter((m) => m.when.startsWith(today))
-  const due = state.touchpoints.filter((t) => t.status === 'due' || (t.status === 'planned' && t.date <= today))
+  const meetings = state.meetings
+    .filter((m) => m.when.startsWith(today))
+    .slice()
+    .sort((a, b) => a.when.localeCompare(b.when))
   const unseen = state.comms.filter((c) => !c.seen)
-  const pendingTrades = state.trades.filter((t) => t.status === 'pending')
-  const pendingEdge = state.approvals.filter((a) => a.status === 'pending')
-  const aum = state.members.reduce((s, m) => s + m.aum, 0)
-  const cold = state.prospects.filter((p) => daysFrom(p.lastTouch) <= -21)
-
-  const priorities = [
-    ...meetings.map((m) => ({
-      key: m.id,
-      title: m.title,
-      sub: `${fmtTime(m.when)} · ${m.location}`,
-      tag: 'Meeting',
-      to: `/meetings/${m.id}`,
-    })),
-    ...due.slice(0, 4).map((t) => ({
-      key: t.id,
-      title: t.title,
-      sub: `${personName(t.subjectType, t.subjectId)} · ${t.kind}`,
-      tag: t.date === today ? 'Due today' : 'Overdue',
-      to: '/touchpoints',
-    })),
-    ...pendingTrades.slice(0, 2).map((t) => ({
-      key: t.id,
-      title: `${t.side.toUpperCase()} ${t.quantity} ${t.symbol}`,
-      sub: t.accountCode,
-      tag: 'Trade',
-      to: '/trades',
-    })),
-  ]
+  const todayTrades = state.trades.filter((t) => isTodayTrade(t.lastTradeDate, today))
+  const pendingToday = todayTrades.filter((t) => t.status === 'pending')
 
   return (
     <div className="page">
@@ -45,44 +22,45 @@ export function Dashboard() {
         <div>
           <h2>Launch pad</h2>
           <p className="lede">
-            Saturday desk. Four meetings, a trades file, and three people who already wrote you.
-            This is the daily surface — not a pre-meeting toy.
+            Saturday desk. Morning file landed at 2:00am — book today’s trades before the open.
+            Four meetings and three people who already wrote you.
           </p>
         </div>
       </div>
 
-      <div className="grid g-4" style={{ marginBottom: 14 }}>
-        <div className="stat">
-          <div className="k">Book AUM</div>
-          <div className="v">{compact(aum)}</div>
-          <div className="s">{state.members.length} members</div>
+      <div className="grid g-3" style={{ marginBottom: 14 }}>
+        <div className="stat stat-action">
+          <div>
+            <div className="k">Today's Positions</div>
+            <div className="v">
+              {todayTrades.length} <span className="v-unit">New</span>
+            </div>
+            <div className="s">{state.trades.length} Positions · {pendingToday.length} Need Approval</div>
+          </div>
+          <button className="btn tiny" onClick={() => nav('/trades')}>Review</button>
         </div>
         <div className="stat">
-          <div className="k">Today</div>
+          <div className="k">Today's Agenda</div>
           <div className="v">{meetings.length}</div>
           <div className="s">meetings on the tape</div>
         </div>
         <div className="stat">
-          <div className="k">Waiting on you</div>
-          <div className="v">{pendingTrades.length + pendingEdge.length}</div>
-          <div className="s">{pendingTrades.length} trades · {pendingEdge.length} Edge</div>
-        </div>
-        <div className="stat">
-          <div className="k">Unseen comms</div>
+          <div className="k">Member Messages</div>
           <div className="v">{unseen.length}</div>
           <div className="s">presence only — no bodies</div>
         </div>
       </div>
 
       <div className="grid g-main">
-        <Card title="Today’s priorities">
-          {priorities.map((p) => (
-            <div key={p.key} className="row click" onClick={() => nav(p.to)}>
+        <Card title="Today's Meetings">
+          {meetings.length === 0 && <div className="empty">Nothing on the book today.</div>}
+          {meetings.map((m) => (
+            <div key={m.id} className="row click" onClick={() => nav(`/meetings/${m.id}`)}>
               <div>
-                <div className="title">{p.title}</div>
-                <div className="sub">{p.sub}</div>
+                <div className="title">{m.title}</div>
+                <div className="sub">{fmtTime(m.when)} · {m.location}</div>
               </div>
-              <Badge kind="brass">{p.tag}</Badge>
+              <Badge kind="brass">{m.kind}</Badge>
             </div>
           ))}
         </Card>
@@ -107,35 +85,6 @@ export function Dashboard() {
             </p>
           </Card>
         </div>
-      </div>
-
-      <div className="grid g-2" style={{ marginTop: 14 }}>
-        <Card title="Pipeline that needs a hand">
-          {state.prospects
-            .filter((p) => ['proposal', 'commit', 'discovery', 'outreach'].includes(p.stage))
-            .slice(0, 6)
-            .map((p) => (
-              <div key={p.id} className="row click" onClick={() => nav(`/prospects/${p.id}`)}>
-                <div>
-                  <div className="title">{p.name}</div>
-                  <div className="sub">{p.company} · {p.objective}</div>
-                </div>
-                <Badge kind={p.stage === 'commit' ? 'ok' : p.stage === 'proposal' ? 'warn' : 'info'}>{p.stage}</Badge>
-              </div>
-            ))}
-        </Card>
-        <Card title="Gone quiet">
-          {cold.length === 0 && <div className="empty">No one has gone cold.</div>}
-          {cold.map((p) => (
-            <div key={p.id} className="row click" onClick={() => nav(`/prospects/${p.id}`)}>
-              <div>
-                <div className="title">{p.name}</div>
-                <div className="sub">{p.company} · last touch {p.lastTouch}</div>
-              </div>
-              <Badge kind="danger">{p.stage}</Badge>
-            </div>
-          ))}
-        </Card>
       </div>
     </div>
   )

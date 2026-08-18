@@ -9,6 +9,9 @@ import type {
   Touchpoint,
   Trade,
 } from '../types'
+import { MORNING_CSV, parseTradesCsv } from './csv'
+import { isTodayTrade, resolvePortfolioFanout } from './portfolio'
+import { todayISO } from './ids'
 
 const members: Member[] = [
   {
@@ -731,104 +734,20 @@ const comms: CommsEvent[] = [
   { id: 'c10', channel: 'email', direction: 'in', subjectId: 'p-lin', subjectType: 'prospect', occurredAt: '2026-08-10T18:20:00', summary: 'New email from Margaret Lin', seen: true },
 ]
 
-const trades: Trade[] = [
-  {
-    id: 'tr1',
-    date: '2026-08-15',
-    symbol: 'BIL',
-    side: 'buy',
-    quantity: 12000,
-    price: 91.62,
-    accountCode: 'VOSS-TX-110',
-    clientHint: 'Voss',
-    status: 'pending',
-    fanout: [{ memberId: 'm-voss', accountId: 'a-v1', accountCode: 'VOSS-TX-110' }],
-  },
-  {
-    id: 'tr2',
-    date: '2026-08-15',
-    symbol: 'MUB',
-    side: 'buy',
-    quantity: 4000,
-    price: 106.18,
-    accountCode: 'SHAH-TR-091',
-    clientHint: 'Shah Trust',
-    status: 'pending',
-    fanout: [{ memberId: 'm-shah', accountId: 'a-s1', accountCode: 'SHAH-TR-091' }],
-  },
-  {
-    id: 'tr3',
-    date: '2026-08-15',
-    symbol: 'NVDA',
-    side: 'sell',
-    quantity: 350,
-    price: 178.4,
-    accountCode: 'CHEN-TX-330',
-    clientHint: 'Chen',
-    status: 'pending',
-    fanout: [{ memberId: 'm-chen', accountId: 'a-c1', accountCode: 'CHEN-TX-330' }],
-  },
-  {
-    id: 'tr4',
-    date: '2026-08-15',
-    symbol: 'VCSH',
-    side: 'buy',
-    quantity: 6200,
-    price: 78.91,
-    accountCode: 'OKON-TX-441',
-    clientHint: 'Okonkwo',
-    status: 'pending',
-    fanout: [{ memberId: 'm-okonkwo', accountId: 'a-o1', accountCode: 'OKON-TX-441' }],
-  },
-  {
-    id: 'tr5',
-    date: '2026-08-15',
-    symbol: 'VTI',
-    side: 'buy',
-    quantity: 800,
-    price: 328.55,
-    accountCode: 'WHIT-TX-208',
-    clientHint: 'Whitaker',
-    status: 'pending',
-    fanout: [{ memberId: 'm-whitaker', accountId: 'a-w1', accountCode: 'WHIT-TX-208' }],
-  },
-  {
-    id: 'tr6',
-    date: '2026-08-15',
-    symbol: 'SGOV',
-    side: 'buy',
-    quantity: 9000,
-    price: 100.42,
-    accountCode: 'ALVA-TR-55',
-    clientHint: 'Alvarez',
-    status: 'pending',
-    fanout: [{ memberId: 'm-alvarez', accountId: 'a-al1', accountCode: 'ALVA-TR-55' }],
-  },
-  {
-    id: 'tr7',
-    date: '2026-08-15',
-    symbol: 'AAPL',
-    side: 'sell',
-    quantity: 200,
-    price: 226.1,
-    accountCode: 'HALE-TX-04',
-    clientHint: 'Hale personal',
-    status: 'pending',
-    fanout: [{ memberId: 'm-hale', accountId: 'a-h2', accountCode: 'HALE-TX-04' }],
-  },
-  {
-    id: 'tr8',
-    date: '2026-08-15',
-    symbol: 'IEFA',
-    side: 'buy',
-    quantity: 1500,
-    price: 84.22,
-    accountCode: 'PARK-TR-77',
-    clientHint: 'Park Trust',
-    status: 'pending',
-    fanout: [{ memberId: 'm-park', accountId: 'a-p2', accountCode: 'PARK-TR-77' }],
-  },
-]
+const deskDay = todayISO()
+const morning = parseTradesCsv(MORNING_CSV)
+const trades: Trade[] = morning.rows.map((r, i) => ({
+  id: `tr${i + 1}`,
+  portfolioName: r.portfolioName,
+  newWeight: r.newWeight,
+  ticker: r.ticker,
+  lastTradeDate: r.lastTradeDate,
+  nextCheckDate: r.nextCheckDate,
+  signal: r.signal,
+  performance: r.performance,
+  status: isTodayTrade(r.lastTradeDate, deskDay) ? 'pending' : 'approved',
+  fanout: resolvePortfolioFanout(members, r.portfolioName),
+}))
 
 const integrations: Integration[] = [
   { id: 'i-outlook', name: 'Email', vendor: 'Outlook', category: 'comms', status: 'simulated', lastSync: '2026-08-15T08:55:00', detail: 'Presence only — no message bodies. New inbound flags land in Comms.' },
@@ -838,7 +757,7 @@ const integrations: Integration[] = [
   { id: 'i-orion', name: 'Account list', vendor: 'Orion', category: 'custodian', status: 'simulated', lastSync: '2026-08-15T06:10:00', detail: 'Member accounts and AUM. Demo snapshot — not a live NAV.' },
   { id: 'i-nitro', name: 'Risk profile', vendor: 'Nitrogen', category: 'risk', status: 'idle', lastSync: '2026-08-12T09:00:00', detail: 'Questionnaire scores stored on each member. No live scoring.' },
   { id: 'i-edge', name: 'Edge Tech approvals', vendor: 'Edge Tech', category: 'approvals', status: 'attention', lastSync: '2026-08-15T08:20:00', detail: 'Two items waiting in the Launch Pad approvals queue.' },
-  { id: 'i-csv', name: 'Daily trades CSV', vendor: 'Email attachment', category: 'file', status: 'attention', lastSync: '2026-08-15T06:02:00', detail: 'Morning positions/trades file. Ingest is simulated; approval is human.' },
+  { id: 'i-csv', name: 'Daily positions file', vendor: 'Email attachment', category: 'file', status: 'attention', lastSync: '2026-08-15T02:00:00', detail: 'Solyco morning file, 2:00am. Today’s LastTradeDate rows need booking before the open.' },
   { id: 'i-li', name: 'LinkedIn', vendor: 'LinkedIn', category: 'social', status: 'idle', lastSync: '2026-08-01T12:00:00', detail: 'Not wired. Profile URLs are stored on prospects only.' },
 ]
 
@@ -869,7 +788,7 @@ const approvals: EdgeApproval[] = [
   },
 ]
 
-export const SEED_VERSION = 1
+export const SEED_VERSION = 3
 
 export function buildSeed(): AppState {
   return {

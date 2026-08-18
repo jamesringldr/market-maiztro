@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useStore } from '../lib/store'
 import { fmtDate, todayISO } from '../lib/ids'
+import { isTodayTrade } from '../lib/portfolio'
 
 const NAV = [
   { label: 'Launch pad', to: '/' },
@@ -31,15 +32,15 @@ export function Shell() {
   const nav = useNavigate()
   const [q, setQ] = useState('')
 
-  const pendingTrades = state.trades.filter((t) => t.status === 'pending').length
+  const pendingToday = state.trades.filter((t) => t.status === 'pending' && isTodayTrade(t.lastTradeDate, todayISO())).length
   const pendingEdge = state.approvals.filter((a) => a.status === 'pending').length
   const unseen = state.comms.filter((c) => !c.seen).length
   const todayMeetings = state.meetings.filter((m) => m.when.startsWith(todayISO())).length
 
   const counts: Record<string, number> = {
-    '/approvals': pendingTrades + pendingEdge,
+    '/approvals': pendingToday + pendingEdge,
     '/comms': unseen,
-    '/trades': pendingTrades,
+    '/trades': pendingToday,
     '/meetings': todayMeetings,
   }
 

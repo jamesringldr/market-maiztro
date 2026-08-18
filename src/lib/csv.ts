@@ -1,11 +1,11 @@
 export type CsvRow = {
-  date: string
-  symbol: string
-  side: 'buy' | 'sell'
-  quantity: number
-  price: number
-  account_code: string
-  client_hint: string
+  portfolioName: string
+  newWeight: number
+  ticker: string
+  lastTradeDate: string
+  nextCheckDate: string
+  signal: number
+  performance: number
 }
 
 function splitLine(line: string): string[] {
@@ -29,6 +29,18 @@ function splitLine(line: string): string[] {
   return out
 }
 
+function norm(h: string): string {
+  return h.toLowerCase().replace(/[\s_]+/g, '')
+}
+
+function parseSheetDate(raw: string): string {
+  const s = raw.trim()
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
+  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+  if (!m) return s
+  return `${m[3]}-${m[1].padStart(2, '0')}-${m[2].padStart(2, '0')}`
+}
+
 export function parseTradesCsv(text: string): { rows: CsvRow[]; errors: string[] } {
   const lines = text
     .split(/\r?\n/)
@@ -37,46 +49,96 @@ export function parseTradesCsv(text: string): { rows: CsvRow[]; errors: string[]
   const errors: string[] = []
   if (!lines.length) return { rows: [], errors: ['Empty file'] }
 
-  const header = splitLine(lines[0]).map((h) => h.toLowerCase().replace(/\s+/g, '_'))
-  const idx = (name: string) => header.indexOf(name)
-  const need = ['date', 'symbol', 'side', 'quantity', 'price', 'account_code', 'client_hint']
-  for (const n of need) {
-    if (idx(n) < 0) errors.push(`Missing column: ${n}`)
+  const header = splitLine(lines[0]).map(norm)
+  const idx = (...names: string[]) => {
+    for (const n of names) {
+      const i = header.indexOf(norm(n))
+      if (i >= 0) return i
+    }
+    return -1
   }
+
+  const col = {
+    portfolio: idx('portfolioname', 'portfolio'),
+    weight: idx('newweight', 'weight'),
+    ticker: idx('ticker'),
+    last: idx('lasttradedate'),
+    next: idx('nextcheckdate'),
+    signal: idx('signal'),
+    performance: idx('performance', 'perf'),
+  }
+  if (col.portfolio < 0) errors.push('Missing column: Portfolio Name')
+  if (col.weight < 0) errors.push('Missing column: New Weight')
+  if (col.ticker < 0) errors.push('Missing column: Ticker')
+  if (col.last < 0) errors.push('Missing column: LastTradeDate')
   if (errors.length) return { rows: [], errors }
 
   const rows: CsvRow[] = []
   lines.slice(1).forEach((line, i) => {
     const cols = splitLine(line)
-    const sideRaw = (cols[idx('side')] || '').toLowerCase()
-    const side = sideRaw === 'sell' ? 'sell' : sideRaw === 'buy' ? 'buy' : null
-    const quantity = Number(cols[idx('quantity')])
-    const price = Number(cols[idx('price')])
-    if (!side) {
-      errors.push(`Row ${i + 2}: side must be buy or sell`)
+    const newWeight = Number(cols[col.weight])
+    const ticker = (cols[col.ticker] || '').toUpperCase()
+    if (!ticker) {
+      errors.push(`Row ${i + 2}: ticker missing`)
       return
     }
-    if (!Number.isFinite(quantity) || !Number.isFinite(price)) {
-      errors.push(`Row ${i + 2}: quantity/price not numeric`)
+    if (!Number.isFinite(newWeight)) {
+      errors.push(`Row ${i + 2}: New Weight not numeric`)
       return
     }
+    const signalRaw = col.signal >= 0 ? Number(cols[col.signal]) : 0
+    const perfRaw = col.performance >= 0 ? Number(cols[col.performance]) : 0
     rows.push({
-      date: cols[idx('date')] || '',
-      symbol: (cols[idx('symbol')] || '').toUpperCase(),
-      side,
-      quantity,
-      price,
-      account_code: cols[idx('account_code')] || '',
-      client_hint: cols[idx('client_hint')] || '',
+      portfolioName: cols[col.portfolio] || '',
+      newWeight,
+      ticker,
+      lastTradeDate: parseSheetDate(cols[col.last] || ''),
+      nextCheckDate: parseSheetDate(col.next >= 0 ? cols[col.next] || '' : ''),
+      signal: Number.isFinite(signalRaw) ? signalRaw : 0,
+      performance: Number.isFinite(perfRaw) ? perfRaw : 0,
     })
   })
   return { rows, errors }
 }
 
-export const DEMO_CSV = `date,symbol,side,quantity,price,account_code,client_hint
-2026-08-15,BIL,buy,2500,91.64,VOSS-IRA-8841,Voss IRA
-2026-08-15,VCIT,buy,1800,82.10,SHAH-TX-092,Shah taxable
-2026-08-15,MSFT,sell,120,428.55,CHEN-TX-330,Chen
-2026-08-15,JEPI,buy,3000,56.22,ALVA-IRA-56,Alvarez IRA
-2026-08-15,BRK.B,buy,40,412.00,HALE-TX-04,Hale
+/** Invented morning file — same shape as the real sheet, none of its names or weights. */
+export const MORNING_CSV = `Portfolio Name,New Weight,Ticker,LastTradeDate,NextCheckDate,Signal,Performance
+01 Qualified Stock,0.0318,MSFT,8/15/2026,6/18/2027,0,0.0142
+03 Non-qualified Stock,0.0284,AMZN,8/15/2026,8/22/2027,0,-0.0061
+02 Qualified ETF,0.1120,VTI,8/15/2026,10/04/2026,0,0.0388
+03 Non-qualified Stock,0.0412,GOOG,7/31/2026,8/14/2027,0,0.0210
+03 Non-qualified Stock,0.0197,META,7/31/2026,8/14/2027,0,-0.0184
+02 Qualified ETF,0.0944,QQQ,7/30/2026,9/19/2026,0,0.0266
+02 Qualified ETF,0.0871,IWM,7/30/2026,11/03/2026,0,-0.0092
+03 Non-qualified Stock,0.0335,JPM,7/30/2026,8/28/2027,0,0.0118
+03 Non-qualified Stock,0.0261,XOM,7/30/2026,8/28/2027,0,0.0044
+01 Qualified Stock,0.0389,UNH,7/29/2026,6/11/2027,0,-0.0227
+01 Qualified Stock,0.0294,CAT,7/29/2026,6/11/2027,0,0.0165
+01 Qualified Stock,0.0226,LMT,7/29/2026,6/11/2027,0,0.0079
+01 Qualified Stock,0.0352,DE,7/29/2026,6/11/2027,0,-0.0033
+02 Qualified ETF,0.0768,IEFA,7/29/2026,11/08/2026,0,0.0091
+03 Non-qualified Stock,0.0188,HON,7/29/2026,8/19/2027,0,0.0028
+03 Non-qualified Stock,0.0249,PEP,7/29/2026,8/19/2027,0,-0.0116
+03 Non-qualified Stock,0.0213,KO,7/29/2026,8/19/2027,0,0.0057
+02 Qualified ETF,0.0815,VNQ,7/21/2026,10/16/2026,0,-0.0149
+01 Qualified Stock,0.0277,WMT,7/20/2026,6/02/2027,0,0.0194
+02 Qualified ETF,0.0693,GLD,7/20/2026,10/12/2026,0,0.0311
+03 Non-qualified Stock,0.0306,COST,7/20/2026,8/08/2027,0,0.0082
+03 Non-qualified Stock,0.0255,V,7/20/2026,8/08/2027,0,0.0137
+01 Qualified Stock,0.0341,MA,7/17/2026,6/01/2027,0,0.0104
+01 Qualified Stock,0.0168,DIS,7/15/2026,5/28/2027,0,-0.0275
+01 Qualified Stock,0.0233,NFLX,7/9/2026,5/28/2027,0,0.0420
+03 Non-qualified Stock,0.0191,AMD,7/7/2026,7/30/2027,0,-0.0312
+01 Qualified Stock,0.0280,AVGO,7/2/2026,5/21/2027,0,0.0246
+04 Non-qualified ETF,0.1540,TLT,7/1/2026,5/12/2027,0,-0.0088
+04 Non-qualified ETF,0.1216,HYG,7/1/2026,9/18/2026,0,0.0063
+04 Non-qualified ETF,0.0982,EFA,7/1/2026,9/18/2026,0,0.0129
+04 Non-qualified ETF,0.0874,EMB,7/1/2026,9/18/2026,0,-0.0047
 `
+
+export const EXTRA_CSV = `Portfolio Name,New Weight,Ticker,LastTradeDate,NextCheckDate,Signal,Performance
+02 Qualified ETF,0.0546,XLK,8/15/2026,11/02/2026,0,0.0177
+04 Non-qualified ETF,0.0362,LQD,8/15/2026,5/19/2027,0,-0.0024
+`
+
+export const DEMO_CSV = EXTRA_CSV

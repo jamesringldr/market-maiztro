@@ -17,10 +17,10 @@ Open [http://localhost:5173](http://localhost:5173). Desk date is locked to **Sa
 
 | Surface | What you can do |
 |---|---|
-| Launch pad | Daily priorities, comms pulse, pipeline, gone-quiet |
+| Launch pad | Today’s meetings, comms pulse, market glance |
 | Approvals | Edge Tech queue + one-click trade approve/hold |
 | Comms | Email / phone / text *presence* only — no message bodies |
-| Trades | Morning CSV blotter, per-trade HITL, fan-out onto member accounts |
+| Trades | 2am positions file; today’s LastTradeDate rows; approve once to the product sleeve |
 | Daily prep / In meeting | Info sheet, scripted STT tape, rapport, landmines, dual recap |
 | Members | 360 file, Rocko rolodex, accounts, missing info, memory |
 | Prospects | CRM stages, intelligence brief, call script, interaction plan |
@@ -28,7 +28,7 @@ Open [http://localhost:5173](http://localhost:5173). Desk date is locked to **Sa
 | Knowledge | Search the same book as a library |
 | Market brief | Saturday desk note written for conversations |
 | Studio | Briefs / scripts / plans / reply drafts |
-| Integrations | Simulated Orion, Nitrogen, Outlook, Edge Tech, trades CSV |
+| Integrations | Simulated Orion, Nitrogen, Outlook, Edge Tech, morning positions file |
 
 Reset the book from the sidebar if you want the original seed back. State lives in `localStorage`.
 

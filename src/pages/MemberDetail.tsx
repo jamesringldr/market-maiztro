@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Badge, Btn, Card, Field } from '../components/ui'
-import { compact, moneyExact, nowISO, uid } from '../lib/ids'
+import { compact, nowISO, pct, uid } from '../lib/ids'
 import { emailVariants } from '../lib/ai'
 import { addDraft, addTouch, useStore } from '../lib/store'
 import type { MemoryItem } from '../types'
@@ -79,8 +79,8 @@ export function MemberDetail() {
 
       {txns[0] && (
         <div className="warn-strip">
-          Latest approved fill: <b>{txns[0].side.toUpperCase()} {txns[0].quantity.toLocaleString()} {txns[0].symbol}</b>
-          {' '}on {txns[0].date} · {moneyExact(txns[0].quantity * txns[0].price)}
+          Latest approved fill: <b>{txns[0].ticker} · {pct(txns[0].weight)}</b>
+          {' '}in {txns[0].portfolioName} on {txns[0].date}
         </div>
       )}
 
@@ -147,9 +147,9 @@ export function MemberDetail() {
                 <div key={t.id} className="row">
                   <div>
                     <div className="title">
-                      <span className={t.side}>{t.side.toUpperCase()}</span> {t.quantity.toLocaleString()} {t.symbol}
+                      {t.ticker} · {pct(t.weight)}
                     </div>
-                    <div className="sub">{t.date} · {moneyExact(t.quantity * t.price)}</div>
+                    <div className="sub">{t.portfolioName} · {t.date}</div>
                   </div>
                 </div>
               ))}

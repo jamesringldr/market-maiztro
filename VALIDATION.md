@@ -4,10 +4,10 @@ Desk date is locked to **Saturday, 15 August 2026**. Run `npm run dev` and do th
 
 ## Click-through
 
-1. **Launch pad** `/` — four meetings, unseen comms, pending trades, gone-quiet list all link.
+1. **Launch pad** `/` — four meetings, unseen comms, and pending trades all link.
 2. **Comms** `/comms` — click **Seen** on Eleanor; stay on the page. Then click the row; land on her member file.
 3. **Touchpoints** `/touchpoints` — click **Done** on a due item; stay on the planner.
-4. **Trades** `/trades` — approve `BIL` / Voss; open `/members/m-voss` and see the fill. Load extra demo CSV. Assign an unmatched row, then approve.
+4. **Trades** `/trades` — today’s cut should be MSFT / AMZN / VTI only (LastTradeDate 8/15). Approve MSFT; open `/members/m-voss` and see the Qualified Stock fill. Members column is a count — click it for the enrolled roster. Full file still shows older rows. Load extra demo file (XLK / LQD).
 5. **Live meeting** `/meetings/mt-smith/live` — Start tape; “bank line” should surface a cash-management upsell. Generate both recaps — internal quotes the tape, member version is a letter. **Listen** (Chromium/Safari) appends a Room line. Pause still works.
 6. **Knowledge** `/knowledge` — landmines / missing / family are first-class. Search `divorce` hits Voss.
 7. **Integrations** `/integrations` — every tile has a simulate action that changes desk state.

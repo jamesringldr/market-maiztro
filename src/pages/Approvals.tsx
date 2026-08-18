@@ -1,12 +1,13 @@
 import { useNavigate } from 'react-router-dom'
 import { Badge, Btn, Card } from '../components/ui'
-import { moneyExact } from '../lib/ids'
+import { pct, todayISO } from '../lib/ids'
+import { isTodayTrade } from '../lib/portfolio'
 import { approveTrade, rejectTrade, useStore } from '../lib/store'
 
 export function Approvals() {
   const { state, patch } = useStore()
   const nav = useNavigate()
-  const trades = state.trades.filter((t) => t.status === 'pending')
+  const trades = state.trades.filter((t) => t.status === 'pending' && isTodayTrade(t.lastTradeDate, todayISO()))
   const edge = state.approvals.filter((a) => a.status === 'pending')
 
   return (
@@ -15,30 +16,32 @@ export function Approvals() {
         <div>
           <h2>Approvals</h2>
           <p className="lede">
-            Two queues, one desk. Trades from this morning’s CSV fan out to member accounts
-            only after you accept them. Edge Tech items are operational, not market.
+            Two queues, one desk. Today’s LastTradeDate rows from the 2am file post to every
+            member in that sleeve after you accept them. Edge Tech items are operational, not market.
           </p>
         </div>
         <Btn kind="primary" onClick={() => nav('/trades')}>Open trades desk</Btn>
       </div>
 
       <div className="grid g-2">
-        <Card title={`Trades awaiting you · ${trades.length}`}>
-          {trades.length === 0 && <div className="empty">Trade blotter is clear.</div>}
+        <Card title={`Today’s trades awaiting you · ${trades.length}`}>
+          {trades.length === 0 && <div className="empty">Morning book is clear.</div>}
           {trades.map((t) => (
             <div key={t.id} className="row">
               <div>
                 <div className="title">
-                  <span className={t.side}>{t.side.toUpperCase()}</span> {t.quantity.toLocaleString()} {t.symbol}
+                  {t.ticker} · {pct(t.newWeight)}
                 </div>
                 <div className="sub">
-                  {t.accountCode} · {t.clientHint} · {moneyExact(t.quantity * t.price)}
-                  {t.fanout.length === 0 ? ' · unmatched' : ` · ${t.fanout.length} account`}
+                  {t.portfolioName}
+                  {t.fanout.length === 0
+                    ? ' · no sleeve match'
+                    : ` · ${new Set(t.fanout.map((f) => f.memberId)).size} members`}
                 </div>
               </div>
               <div className="btn-row">
                 <Btn kind="good tiny" onClick={() => patch((s) => approveTrade(s, t.id))}>Approve</Btn>
-                <Btn kind="bad tiny" onClick={() => patch((s) => rejectTrade(s, t.id, 'Held from launch pad'))}>Hold</Btn>
+                <Btn kind="bad tiny" onClick={() => patch((s) => rejectTrade(s, t.id, 'Held from approvals'))}>Hold</Btn>
               </div>
             </div>
           ))}

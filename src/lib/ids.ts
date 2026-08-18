@@ -18,6 +18,23 @@ export function moneyExact(n: number): string {
   }).format(n)
 }
 
+export function pct(n: number): string {
+  return `${(n * 100).toFixed(2)}%`
+}
+
+export function signedPct(n: number): string {
+  const body = `${(Math.abs(n) * 100).toFixed(2)}%`
+  if (n > 0) return `+${body}`
+  if (n < 0) return `−${body}`
+  return body
+}
+
+export function sheetDate(iso: string): string {
+  const [y, m, d] = iso.split('-')
+  if (!y || !m || !d) return iso
+  return `${Number(m)}/${Number(d)}/${y}`
+}
+
 export function compact(n: number): string {
   if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`
   if (Math.abs(n) >= 1_000) return `$${(n / 1_000).toFixed(0)}K`

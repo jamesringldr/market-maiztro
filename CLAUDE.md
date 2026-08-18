@@ -9,7 +9,7 @@ Front-end-only demo of Solyco’s internal desk. Vite + React + TypeScript. Seed
 
 ## Invariants
 - Simulated integrations only. Comms = presence, never message bodies.
-- Trades CSV is ingested locally and posted only after per-trade HITL approval.
+- Morning positions file is ingested locally. New = LastTradeDate is today. Posted only after per-row HITL approval, fanned to the portfolio sleeve.
 - Generated language is template-based. Do not wire a model.
 - This product **is** the CRM (see Lab `decisions/0001-initial-direction.md`).
 - Solyco-only. No multi-tenant / white-label work without revisiting that decision.

@@ -157,13 +157,13 @@ export type TradeFanout = {
 
 export type Trade = {
   id: Id
-  date: string
-  symbol: string
-  side: 'buy' | 'sell'
-  quantity: number
-  price: number
-  accountCode: string
-  clientHint: string
+  portfolioName: string
+  newWeight: number
+  ticker: string
+  lastTradeDate: string
+  nextCheckDate: string
+  signal: number
+  performance: number
   status: 'pending' | 'approved' | 'rejected'
   fanout: TradeFanout[]
   reason?: string
@@ -222,10 +222,9 @@ export type PostedTxn = {
   tradeId: Id
   memberId: Id
   accountId: Id
-  symbol: string
-  side: 'buy' | 'sell'
-  quantity: number
-  price: number
+  ticker: string
+  weight: number
+  portfolioName: string
   date: string
 }
 
