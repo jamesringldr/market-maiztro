@@ -17,3 +17,4 @@ Front-end-only demo of Solyco’s internal desk. Vite + React + TypeScript. Seed
 ## Commands
 `npm run dev` — desktop demo on :5173
 `npm run build` — typecheck + production bundle
+GitHub Pages: `https://jamesringldr.github.io/market-maiztro/` (workflow on `main`, `GITHUB_PAGES=1`)

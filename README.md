@@ -11,7 +11,9 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173). Desk date is locked to **Saturday, 15 August 2026**.
+Live desk: [https://jamesringldr.github.io/market-maiztro/](https://jamesringldr.github.io/market-maiztro/)
+
+Open [http://localhost:5173](http://localhost:5173) for local. Desk date is locked to **Saturday, 15 August 2026**.
 
 ## What is in the demo
 
